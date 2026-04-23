@@ -42,9 +42,9 @@ func main() {
 		w.Write([]byte(fmt.Sprintf("Hits: %d", hits)))
 	}
 
-	mux.HandleFunc("POST /reset", apiCfg.handlerReset)
-	mux.HandleFunc("GET /healthz", h1)
-	mux.HandleFunc("GET /metrics", h2)
+	mux.HandleFunc("POST /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("GET /api/healthz", h1)
+	mux.HandleFunc("GET /api/metrics", h2)
 
 	s := &http.Server{
 		Addr:           ":8080",
