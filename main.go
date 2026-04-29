@@ -36,15 +36,21 @@ func main() {
 		w.Write([]byte("OK"))
 	}
 	h2 := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		hits := apiCfg.fileserverHits.Load()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf("Hits: %d", hits)))
+		w.Write([]byte(fmt.Sprintf(`
+		<html>
+  			<body>
+    			<h1>Welcome, Chirpy Admin</h1>
+    			<p>Chirpy has been visited %d times!</p>
+  			</body>
+		</html>`, hits)))
 	}
 
-	mux.HandleFunc("POST /api/reset", apiCfg.handlerReset)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	mux.HandleFunc("GET /api/healthz", h1)
-	mux.HandleFunc("GET /api/metrics", h2)
+	mux.HandleFunc("GET /admin/metrics", h2)
 
 	s := &http.Server{
 		Addr:           ":8080",
