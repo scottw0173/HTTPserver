@@ -4,25 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync/atomic"
 	"time"
 )
-
-type apiConfig struct {
-	fileserverHits atomic.Int32
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits.Add(1)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits.Store(0)
-	w.WriteHeader(http.StatusOK)
-}
 
 func main() {
 	apiCfg := &apiConfig{}
@@ -51,6 +34,7 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	mux.HandleFunc("GET /api/healthz", h1)
 	mux.HandleFunc("GET /admin/metrics", h2)
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	s := &http.Server{
 		Addr:           ":8080",
