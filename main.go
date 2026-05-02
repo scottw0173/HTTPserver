@@ -1,14 +1,30 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
 func main() {
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Print(err)
+		os.Exit(1)
+	}
+	dbQueries := database.New(db)
 	apiCfg := &apiConfig{}
+	apiCfg.dbQueries = dbQueries
+
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir("."))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app/", fileServer)))
