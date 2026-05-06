@@ -5,14 +5,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		respondWithError(w, 403, "Forbidden")
+		return
+	}
 	cfg.fileserverHits.Store(0)
+	cfg.dbQueries.DeleteAllUsers(r.Context())
 	w.WriteHeader(http.StatusOK)
 }
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 
 	params := chirpRequest{}
@@ -28,7 +35,33 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filteredChirp := filterChirp(params.Body)
-	respondWithJSON(w, 200, map[string]string{
-		"cleaned_body": filteredChirp,
-	})
+
+	newChirp := database.CreateChirpParams{
+		Body:   filteredChirp,
+		UserID: params.User_id,
+	}
+	newPost, err := cfg.dbQueries.CreateChirp(r.Context(), newChirp)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error adding new chirp to database: %s", err))
+		return
+	}
+	respondWithJSON(w, http.StatusCreated, databaseChirptoChirp(newPost))
+}
+
+func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	params := createuserRequest{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error decoding user: %s", err))
+		return
+	}
+
+	user, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating user: %s", err))
+		return
+	}
+	respondWithJSON(w, http.StatusCreated, databaseUsertoUser(user))
 }

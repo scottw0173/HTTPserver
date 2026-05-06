@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -43,4 +45,23 @@ func filterChirp(msg string) string {
 	}
 	cleaned_msg := strings.Join(words, " ")
 	return cleaned_msg
+}
+
+func databaseUsertoUser(dbUser database.User) user {
+	return user{
+		ID:        dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Email:     dbUser.Email,
+	}
+}
+
+func databaseChirptoChirp(dbChirp database.Chirp) chirp {
+	return chirp{
+		ID:        dbChirp.ID,
+		CreatedAt: dbChirp.CreatedAt,
+		UpdatedAt: dbChirp.UpdatedAt,
+		Body:      dbChirp.Body,
+		User_id:   dbChirp.UserID,
+	}
 }

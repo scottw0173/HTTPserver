@@ -24,6 +24,7 @@ func main() {
 	dbQueries := database.New(db)
 	apiCfg := &apiConfig{}
 	apiCfg.dbQueries = dbQueries
+	apiCfg.platform = os.Getenv("PLATFORM")
 
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir("."))
@@ -50,7 +51,8 @@ func main() {
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	mux.HandleFunc("GET /api/healthz", h1)
 	mux.HandleFunc("GET /admin/metrics", h2)
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	mux.HandleFunc("POST /api/chirps", apiCfg.handlerPostChirp)
+	mux.HandleFunc("POST /api/users", apiCfg.handlerCreateUser)
 
 	s := &http.Server{
 		Addr:           ":8080",
