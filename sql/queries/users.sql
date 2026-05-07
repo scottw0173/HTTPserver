@@ -26,3 +26,8 @@ RETURNING *;
 SELECT * 
 FROM chirps
 ORDER BY created_at ASC;
+
+-- name: ReturnSingleChirp :one
+SELECT *
+FROM chirps
+WHERE id = $1;

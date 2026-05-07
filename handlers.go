@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
@@ -78,4 +79,17 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 		jsonChirps = append(jsonChirps, jsonChirp)
 	}
 	respondWithJSON(w, http.StatusOK, jsonChirps)
+}
+
+func (cfg *apiConfig) handlerReturnChirp(w http.ResponseWriter, r *http.Request) {
+	chirpID := r.PathValue("id")
+	u, err := uuid.Parse(chirpID)
+	if err != nil {
+		log.Fatalf("failed to parse UUID: %v", err)
+	}
+	chirp, err := cfg.dbQueries.ReturnSingleChirp(r.Context(), u)
+	if err != nil {
+		respondWithError(w, 404, fmt.Sprintf("cannot find chirp: %s", err))
+	}
+	respondWithJSON(w, http.StatusOK, databaseChirptoChirp(chirp))
 }
