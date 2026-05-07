@@ -65,3 +65,17 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	}
 	respondWithJSON(w, http.StatusCreated, databaseUsertoUser(user))
 }
+
+func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.dbQueries.ReturnChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error acquiring chirps: %s", err))
+	}
+
+	var jsonChirps []chirp
+	for _, chirp := range chirps {
+		jsonChirp := databaseChirptoChirp(chirp)
+		jsonChirps = append(jsonChirps, jsonChirp)
+	}
+	respondWithJSON(w, http.StatusOK, jsonChirps)
+}
