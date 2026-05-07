@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/scottw0173/HTTPserver/internal/auth"
 	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
@@ -58,8 +59,13 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error decoding user: %s", err))
 		return
 	}
+	hashed_password, _ := auth.HashPassword(params.Password)
+	userParams := database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashed_password,
+	}
 
-	user, err := cfg.dbQueries.CreateUser(r.Context(), params.Email)
+	user, err := cfg.dbQueries.CreateUser(r.Context(), userParams)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating user: %s", err))
 		return
@@ -92,4 +98,33 @@ func (cfg *apiConfig) handlerReturnChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, 404, fmt.Sprintf("cannot find chirp: %s", err))
 	}
 	respondWithJSON(w, http.StatusOK, databaseChirptoChirp(chirp))
+}
+
+func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+
+	params := createuserRequest{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
+		return
+	}
+	dbUser, err := cfg.dbQueries.ReturnUser(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
+		return
+	}
+
+	OK, err := auth.CheckPasswordHash(params.Password, dbUser.HashedPassword)
+	if !OK || err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, user{
+		ID:        dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Email:     dbUser.Email,
+	})
 }
