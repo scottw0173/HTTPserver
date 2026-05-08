@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/scottw0173/HTTPserver/internal/auth"
@@ -22,10 +23,20 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	userID, err := auth.ValidateJWT(tokenString, cfg.serverSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 
 	params := chirpRequest{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding parameters %s", err)
 		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("Error decoding parameters: %s", err))
@@ -40,7 +51,7 @@ func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 
 	newChirp := database.CreateChirpParams{
 		Body:   filteredChirp,
-		UserID: params.User_id,
+		UserID: userID,
 	}
 	newPost, err := cfg.dbQueries.CreateChirp(r.Context(), newChirp)
 	if err != nil {
@@ -109,6 +120,9 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
 		return
 	}
+	if params.ExpiresIn == 0 || params.ExpiresIn > 3600 {
+		params.ExpiresIn = 3600
+	}
 	dbUser, err := cfg.dbQueries.ReturnUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
@@ -120,11 +134,16 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("Incorrect email or password"))
 		return
 	}
-
+	tokenExpiration := time.Duration(params.ExpiresIn) * time.Second
+	userToken, err := auth.MakeJWT(dbUser.ID, cfg.serverSecret, tokenExpiration)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("error creating JWT token"))
+	}
 	respondWithJSON(w, http.StatusOK, user{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt,
 		UpdatedAt: dbUser.UpdatedAt,
 		Email:     dbUser.Email,
+		Token:     userToken,
 	})
 }
