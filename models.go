@@ -11,6 +11,9 @@ import (
 // sqlc string:
 // postgres://postgres:reteeks@localhost:5432/chirpy
 
+// migrations:
+// goose postgres "postgres://postgres:reteeks@localhost:5432/chirpy?sslmode=disable" up
+
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
@@ -24,17 +27,17 @@ type chirpRequest struct {
 }
 
 type user struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID            uuid.UUID `json:"id"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	Email         string    `json:"email"`
+	Token         string    `json:"token"`
+	Refresh_token string    `json:"refresh_token"`
 }
 
 type createuserRequest struct {
-	Password  string `json:"password"`
-	Email     string `json:"email"`
-	ExpiresIn int32  `json:"expires_in"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
 }
 
 type chirp struct {
