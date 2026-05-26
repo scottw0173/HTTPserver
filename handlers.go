@@ -233,3 +233,36 @@ func (cfg *apiConfig) handlerUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, http.StatusOK, databaseUsertoUser(updatedUser))
 }
+
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	userID, err := auth.ValidateJWT(tokenString, cfg.serverSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error validating JWT: %s", err))
+		return
+	}
+	chirpID := r.PathValue("chirpID")
+	u, err := uuid.Parse(chirpID)
+	if err != nil {
+		log.Fatalf("failed to parse UUID: %v", err)
+	}
+	chirp, err := cfg.dbQueries.ReturnSingleChirp(r.Context(), u)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "there is no chirp with that ID")
+		return
+	}
+	if chirp.UserID != userID {
+		respondWithError(w, http.StatusForbidden, "user is not author of this chirp")
+		return
+	}
+	err = cfg.dbQueries.DeleteChirp(r.Context(), u)
+	if err != nil {
+		respondWithError(w, http.StatusForbidden, "error deleting chirp")
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, "")
+}

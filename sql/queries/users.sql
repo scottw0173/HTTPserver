@@ -71,3 +71,7 @@ SET updated_at = NOW(),
     hashed_password = $2
 WHERE id = $3
 RETURNING *;
+
+-- name: DeleteChirp :exec
+DELETE FROM chirps
+WHERE id = $1;
