@@ -33,6 +33,7 @@ type user struct {
 	Email         string    `json:"email"`
 	Token         string    `json:"token"`
 	Refresh_token string    `json:"refresh_token"`
+	Is_chirpy_red bool      `json:"is_chirpy_red"`
 }
 
 type createuserRequest struct {
@@ -46,4 +47,13 @@ type chirp struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Body      string    `json:"body"`
 	User_id   uuid.UUID `json:"user_id"`
+}
+
+type subscriptionData struct {
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type subscriptionRequest struct {
+	Event string           `json:"event"`
+	Data  subscriptionData `json:"data"`
 }

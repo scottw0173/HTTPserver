@@ -147,14 +147,10 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, fmt.Sprintln("error creating refresh token"))
 		return
 	}
-	respondWithJSON(w, http.StatusOK, user{
-		ID:            dbUser.ID,
-		CreatedAt:     dbUser.CreatedAt,
-		UpdatedAt:     dbUser.UpdatedAt,
-		Email:         dbUser.Email,
-		Token:         userToken,
-		Refresh_token: refreshToken.Token,
-	})
+	cfgUser := databaseUsertoUser(dbUser)
+	cfgUser.Token = userToken
+	cfgUser.Refresh_token = refreshToken.Token
+	respondWithJSON(w, http.StatusOK, cfgUser)
 }
 
 func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
@@ -264,5 +260,24 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusForbidden, "error deleting chirp")
 		return
 	}
-	respondWithJSON(w, http.StatusNoContent, "")
+	respondWithJSON(w, http.StatusNoContent, nil)
+}
+
+func (cfg *apiConfig) handlerUpgradeSubscription(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	params := subscriptionRequest{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "problem decoding request body")
+		return
+	}
+	if params.Event != "user.upgraded" {
+		respondWithJSON(w, http.StatusNoContent, nil)
+	}
+	_, err = cfg.dbQueries.UpgradeToChirpyRed(r.Context(), params.Data.UserID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "userID not found")
+		return
+	}
+	respondWithJSON(w, http.StatusNoContent, nil)
 }
