@@ -82,3 +82,10 @@ SET is_chirpy_red = true,
 updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: ReturnChirpsForUser :many
+SELECT chirps.*
+FROM chirps
+INNER JOIN users
+ON chirps.user_id = users.id
+WHERE users.id = $1;

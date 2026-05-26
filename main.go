@@ -26,6 +26,7 @@ func main() {
 	apiCfg.dbQueries = dbQueries
 	apiCfg.platform = os.Getenv("PLATFORM")
 	apiCfg.serverSecret = os.Getenv("SERVER_SECRET")
+	apiCfg.polkaKey = os.Getenv("POLKA_KEY")
 
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir("."))

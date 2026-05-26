@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,9 +86,26 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.dbQueries.ReturnChirps(r.Context())
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error acquiring chirps: %s", err))
+	s := r.URL.Query().Get("author_id")
+	t := r.URL.Query().Get("sort")
+	chirps := []database.Chirp{}
+	var err error
+
+	if s == "" {
+		chirps, err = cfg.dbQueries.ReturnChirps(r.Context())
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("error acquiring chirps: %s", err))
+		}
+	} else {
+		u, err := uuid.Parse(s)
+		if err != nil {
+			log.Fatalf("failed to parse UUID: %v", err)
+		}
+		chirps, err = cfg.dbQueries.ReturnChirpsForUser(r.Context(), u)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "no chirps for that userID")
+			return
+		}
 	}
 
 	var jsonChirps []chirp
@@ -95,6 +113,16 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 		jsonChirp := databaseChirptoChirp(chirp)
 		jsonChirps = append(jsonChirps, jsonChirp)
 	}
+	if t == "desc" {
+		sort.Slice(jsonChirps, func(i, j int) bool {
+			return jsonChirps[i].CreatedAt.After(jsonChirps[j].CreatedAt)
+		})
+	} else {
+		sort.Slice(jsonChirps, func(i, j int) bool {
+			return jsonChirps[i].CreatedAt.Before(jsonChirps[j].CreatedAt)
+		})
+	}
+
 	respondWithJSON(w, http.StatusOK, jsonChirps)
 }
 
@@ -264,9 +292,19 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handlerUpgradeSubscription(w http.ResponseWriter, r *http.Request) {
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "error retrieving apiKey")
+		return
+	}
+	if apiKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "apiKeys do not match")
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := subscriptionRequest{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "problem decoding request body")
 		return

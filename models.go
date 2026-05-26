@@ -19,6 +19,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	serverSecret   string
+	polkaKey       string
 }
 
 type chirpRequest struct {

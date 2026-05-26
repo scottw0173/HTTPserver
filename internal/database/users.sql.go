@@ -181,6 +181,43 @@ func (q *Queries) ReturnChirps(ctx context.Context) ([]Chirp, error) {
 	return items, nil
 }
 
+const returnChirpsForUser = `-- name: ReturnChirpsForUser :many
+SELECT chirps.id, chirps.created_at, chirps.updated_at, chirps.body, chirps.user_id
+FROM chirps
+INNER JOIN users
+ON chirps.user_id = users.id
+WHERE users.id = $1
+`
+
+func (q *Queries) ReturnChirpsForUser(ctx context.Context, id uuid.UUID) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, returnChirpsForUser, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chirp
+	for rows.Next() {
+		var i Chirp
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Body,
+			&i.UserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const returnSingleChirp = `-- name: ReturnSingleChirp :one
 SELECT id, created_at, updated_at, body, user_id
 FROM chirps
