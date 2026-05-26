@@ -196,3 +196,40 @@ func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, 204, "")
 }
+
+func (cfg *apiConfig) handlerUpdate(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	userID, err := auth.ValidateJWT(tokenString, cfg.serverSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error validating JWT: %s", err))
+		return
+	}
+	decoder := json.NewDecoder(r.Body)
+
+	params := createuserRequest{}
+	err = decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error decoding user: %s", err))
+		return
+	}
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error hashing password: %s", err))
+		return
+	}
+	updatedInfo := database.UpdateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+		ID:             userID,
+	}
+	updatedUser, err := cfg.dbQueries.UpdateUser(r.Context(), updatedInfo)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error updating user: %s", err))
+		return
+	}
+	respondWithJSON(w, http.StatusOK, databaseUsertoUser(updatedUser))
+}
