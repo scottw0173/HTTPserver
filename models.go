@@ -8,11 +8,8 @@ import (
 	"github.com/scottw0173/HTTPserver/internal/database"
 )
 
-// sqlc string:
-// postgres://postgres:reteeks@localhost:5432/chirpy
-
 // migrations:
-// goose postgres "postgres://postgres:reteeks@localhost:5432/chirpy?sslmode=disable" up
+// goose postgres "postgres://postgres:PASSWORD@localhost:5432/DBNAME?sslmode=disable" up
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
