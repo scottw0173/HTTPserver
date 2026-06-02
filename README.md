@@ -4,9 +4,13 @@ A RESTful HTTP server written in Go that serves as the backend for a Twitter-lik
 
 ## Features
 
-- User creation via REST API
+- User creation with bcrypt password hashing
+- JWT-based authentication with short-lived access tokens and longer-lived refresh tokens
+- Refresh token revocation for secure logout
+- Protected endpoints requiring valid Bearer token authorization
 - Post and retrieve "chirps" (messages capped at 140 characters)
 - Profanity filtering on chirp content
+- Chirpy Red subscription management via authenticated webhook
 - File server for static assets with hit tracking middleware
 - Admin endpoints for metrics and environment-gated reset functionality
 - PostgreSQL persistence via sqlc-generated type-safe queries
@@ -16,6 +20,7 @@ A RESTful HTTP server written in Go that serves as the backend for a Twitter-lik
 - Go 1.21+
 - PostgreSQL
 - [sqlc](https://sqlc.dev/) (if regenerating database queries)
+- [goose](https://github.com/pressly/goose) (if running migrations)
 
 ## Setup
 
@@ -47,9 +52,15 @@ The server starts on port `8080`.
 |--------|----------|-------------|
 | GET | `/api/healthz` | Health check |
 | POST | `/api/users` | Create a new user |
-| POST | `/api/chirps` | Post a new chirp |
+| POST | `/api/login` | Login and receive JWT tokens |
+| POST | `/api/refresh` | Refresh access token |
+| POST | `/api/revoke` | Revoke refresh token |
+| POST | `/api/chirps` | Post a new chirp (auth required) |
 | GET | `/api/chirps` | List all chirps |
 | GET | `/api/chirps/{id}` | Get a chirp by ID |
+| DELETE | `/api/chirps/{id}` | Delete a chirp (auth required) |
+| PUT | `/api/users` | Update user email/password (auth required) |
+| POST | `/api/polka/webhooks` | Polka webhook handler |
 | GET | `/admin/metrics` | View file server hit count |
 | POST | `/admin/reset` | Reset hits and users (dev only) |
 
@@ -57,3 +68,4 @@ The server starts on port `8080`.
 
 - The `/admin/reset` endpoint is restricted to `dev` environments via the `PLATFORM` environment variable
 - Chirps exceeding 140 characters are rejected with a 400 error
+- JWT access tokens are short-lived; use the refresh endpoint to obtain a new one without re-authenticating
