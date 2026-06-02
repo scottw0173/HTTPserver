@@ -1,76 +1,59 @@
-# HTTPserver
+# HTTP Server
 
-A RESTful HTTP server and API built in Go, backed by PostgreSQL. Implements full CRUD operations, request validation, environment-gated admin controls, and request metrics tracking. Built as part of an ongoing series of projects to develop practical backend engineering skills.
-
-## Stack
-
-- **Language:** Go
-- **Database:** PostgreSQL
-- **Query layer:** [sqlc](https://sqlc.dev/) — type-safe Go generated from raw SQL
-- **Router:** Go standard library `net/http` (no framework)
-- **Environment:** `godotenv` for local config, `.env`-based DB connection
+A RESTful HTTP server written in Go that serves as the backend for a Twitter-like microblogging application. Built on Go's standard `net/http` library with a PostgreSQL database managed via sqlc.
 
 ## Features
 
-- RESTful API with explicit HTTP method routing (`GET`, `POST`, `DELETE`)
-- PostgreSQL integration via `database/sql` and the `pq` driver
-- Type-safe database queries generated with sqlc
-- Intentional HTTP status code usage (200, 201, 400, 403, 404, 500)
-- Middleware for tracking file server hit counts
-- Environment-gated admin reset endpoint (dev only, returns 403 in other environments)
-- Request body validation with structured error responses
-- JSON request decoding and response encoding with clean DB-to-API type mapping
-- UUIDs for resource identification (`google/uuid`)
-- Configurable server timeouts and max header size
+- User creation via REST API
+- Post and retrieve "chirps" (messages capped at 140 characters)
+- Profanity filtering on chirp content
+- File server for static assets with hit tracking middleware
+- Admin endpoints for metrics and environment-gated reset functionality
+- PostgreSQL persistence via sqlc-generated type-safe queries
 
-## API Endpoints
+## Requirements
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/healthz` | Health check |
-| `POST` | `/api/users` | Create a user |
-| `POST` | `/api/chirps` | Create a chirp (validated, filtered) |
-| `GET` | `/api/chirps` | List all chirps |
-| `GET` | `/api/chirps/{id}` | Get a single chirp by UUID |
-| `GET` | `/admin/metrics` | View file server hit count |
-| `POST` | `/admin/reset` | Reset hit count and users (dev only) |
-
-## Project Structure
-
-```
-HTTPserver/
-├── main.go           # Server setup, route registration, DB connection
-├── handlers.go       # HTTP handler functions
-├── helpers.go        # respondWithJSON, respondWithError, filterChirp
-├── models.go         # API-layer structs (chirp, user, request types)
-├── sqlc.yaml         # sqlc config
-├── sql/              # Raw SQL schema and queries
-└── internal/
-    └── database/     # sqlc-generated type-safe DB layer
-```
+- Go 1.21+
+- PostgreSQL
+- [sqlc](https://sqlc.dev/) (if regenerating database queries)
 
 ## Setup
 
-1. Create a PostgreSQL database and set the connection string in a `.env` file:
-   ```
-   DB_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
-   PLATFORM=dev
-   ```
+1. Clone the repository
+```bash
+git clone https://github.com/scottw0173/HTTPserver.git
+cd HTTPserver
+```
 
-2. Run database migrations from the `sql/` directory.
+2. Copy `.env.example` to `.env` and configure your database URL
+```bash
+cp .env.example .env
+```
 
-3. Build and run:
-   ```bash
-   go build -o HTTPserver && ./HTTPserver
-   ```
+Your `.env` should contain:
+- DB_URL=postgres://username:password@localhost:5432/dbname
+- PLATFORM=dev
 
-Server starts on port `8080`.
+3. Run the server
+```bash
+go run *.go
+```
 
-## Status
+The server starts on port `8080`.
 
-Active development. Core user and chirp endpoints are complete and functional.
+## API Endpoints
 
-Roadmap:
-- **Authentication** — password hashing with Argon2ID, stored securely in the database; login endpoint returning a session token
-- **Authorization** — access control layer restricting endpoints by user identity and role (in design)
-- **Webhooks** — inbound webhook support for external event integration (e.g. email notifications)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/healthz` | Health check |
+| POST | `/api/users` | Create a new user |
+| POST | `/api/chirps` | Post a new chirp |
+| GET | `/api/chirps` | List all chirps |
+| GET | `/api/chirps/{id}` | Get a chirp by ID |
+| GET | `/admin/metrics` | View file server hit count |
+| POST | `/admin/reset` | Reset hits and users (dev only) |
+
+## Notes
+
+- The `/admin/reset` endpoint is restricted to `dev` environments via the `PLATFORM` environment variable
+- Chirps exceeding 140 characters are rejected with a 400 error
